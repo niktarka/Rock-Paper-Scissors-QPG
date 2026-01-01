@@ -1,0 +1,802 @@
+
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no"/>
+<title>QuickPlay Games — ROCK · PAPER · SCISSORS</title>
+<style>
+  /* ============================================================
+     QUICKPLAY GAMES — Неон-дарк стиль з темами й i18n
+     Екрани: Loading(3s), Menu, Game, Online, Result
+     ============================================================ */
+  :root{
+    --bg:#0b1220; --bg2:#090f1c;
+    --panel:#141b2a; --panel2:#0f1624;
+    --fg:#e8eef7; --fg-d:#aeb9cc;
+    --a:#4cc4ff; --a2:#8a63ff; --ok:#29f0b0; --danger:#ff4c6d; --warn:#f7c948;
+    --border:rgba(255,255,255,0.08);
+    --shadow:0 40px 80px rgba(0,0,0,0.45);
+  }
+  /* Теми */
+  .theme-light{
+    --bg:#f5f7fb; --bg2:#eef1f8;
+    --panel:#ffffff; --panel2:#edf2fb;
+    --fg:#1c2431; --fg-d:#5a6b84;
+    --a:#2b7fff; --a2:#5f3cff; --ok:#00b87a; --danger:#ff3b57; --warn:#f7c948;
+    --border:rgba(28,36,49,0.12);
+    --shadow:0 30px 60px rgba(0,0,0,0.25);
+  }
+  .theme-neon{
+    --bg:#05070f; --bg2:#060711;
+    --panel:#0a0f1a; --panel2:#070a14;
+    --fg:#eaf4ff; --fg-d:#8ea7cc;
+    --a:#00e5ff; --a2:#7a00ff; --ok:#00ffa3; --danger:#ff2b6e; --warn:#ffd166;
+    --border:rgba(255,255,255,0.1);
+  }
+
+  *{box-sizing:border-box}
+  html,body{
+    margin:0;padding:0;width:100%;height:100%;
+    background: radial-gradient(1200px at 50% 30%, var(--bg2), var(--bg) 70%);
+    color:var(--fg);
+    font-family: Inter,system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,"Noto Sans",Arial;
+    overflow:hidden; overscroll-behavior:none;
+  }
+  .screen{position:absolute;inset:0;display:none;align-items:center;justify-content:center;padding:2vh 2vw;}
+  .panel{
+    width:min(1100px,94vw); min-height:min(680px,88vh);
+    background:
+      linear-gradient(180deg, rgba(76,196,255,0.08), transparent 40%),
+      linear-gradient(180deg, rgba(138,99,255,0.08), transparent 70%),
+      linear-gradient(180deg, var(--panel), var(--panel2));
+    border:1px solid var(--border); border-radius:22px; box-shadow:var(--shadow);
+    backdrop-filter:blur(8px);
+    padding: clamp(16px,2.6vw,28px);
+  }
+
+  /* ---------- LOADING ---------- */
+  #loading{display:flex}
+  .loading-wrap{text-align:center; user-select:none;}
+  .logo{display:flex;align-items:center;gap:12px;justify-content:center;margin-bottom:6px;}
+  .mark{width:42px;height:42px;border-radius:12px;transform:rotate(10deg);
+        background:conic-gradient(from 210deg,var(--a)0 120deg,var(--a2)120deg 240deg,var(--ok)240deg 360deg);
+        box-shadow:0 10px 24px rgba(76,196,255,0.25);}
+  .title{
+    font-size: clamp(36px, 8vw, 88px); font-weight: 900; letter-spacing: 1.2px;
+    text-shadow: 0 24px 60px rgba(76,196,255,0.28), 0 0 120px rgba(76,196,255,0.35);
+  }
+  .dots{margin-top:10px; color:var(--fg-d); font-size:18px; letter-spacing:.8px;}
+  .spinner{
+    width:74px;height:74px;margin:26px auto 0;border-radius:50%;
+    background:conic-gradient(from 0deg, var(--a) 0 60deg, transparent 60deg 360deg);
+    animation:spin 1.2s linear infinite; box-shadow:0 0 42px rgba(76,196,255,0.35);
+  }
+  @keyframes spin{to{transform:rotate(360deg)}}
+  .fade-out{animation:fadeOut .8s ease forwards}
+  @keyframes fadeOut{to{opacity:0; transform:scale(.98)}}
+
+  /* ---------- MENU ---------- */
+  .menu-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;}
+  .brand{display:flex;align-items:center;gap:12px;font-weight:900;font-size:22px;}
+  .row{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+  .btn{
+    appearance:none; border:1px solid var(--border); outline:none; cursor:pointer;
+    border-radius:16px; padding:12px 16px; font-size:16px; font-weight:800; color:var(--fg);
+    background: linear-gradient(180deg,#1a2330aa,#101720aa);
+    box-shadow: 0 12px 24px rgba(0,0,0,0.35), inset 0 1px 0 rgba(255,255,255,0.08);
+    transition: transform .08s ease, filter .2s ease, box-shadow .2s ease;
+    text-align:left;
+  }
+  .btn:hover{filter:brightness(1.08)}
+  .btn:active{transform:translateY(1px)}
+  .btn.primary{
+    border-color:#4cc4ff66;
+    background: linear-gradient(180deg, rgba(76,196,255,0.25), rgba(76,196,255,0.12)), linear-gradient(180deg,#1c2731,#121923);
+    box-shadow: 0 14px 28px rgba(76,196,255,0.22);
+  }
+  .btn.warn{border-color:#f7c94866; box-shadow:0 14px 28px rgba(247,201,72,0.18);}
+  .btn.danger{border-color:#ff4c6d66; box-shadow:0 14px 28px rgba(255,76,109,0.18);}
+  .grid{display:grid; grid-template-columns: repeat(2,1fr); gap:12px; margin-top:12px;}
+  .small{font-size:13px;color:var(--fg-d)}
+
+  /* ---------- GAME LAYOUT ---------- */
+  .game-wrap{
+    display:grid; grid-template-rows: auto 1fr auto;
+    gap:10px; min-height: calc(88vh - 60px);
+  }
+  .hud{display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap;}
+  .pill{padding:8px 12px; border-radius:14px; border:1px solid var(--border); background:linear-gradient(180deg,#1b2432,#121923); font-weight:800; box-shadow:0 10px 20px rgba(0,0,0,0.35)}
+  .center-res{display:grid; place-items:center; border-radius:16px; border:1px solid var(--border); background:linear-gradient(180deg,#182030,#121720); box-shadow: inset 0 12px 24px rgba(0,0,0,0.4); font-weight:900; padding:16px; min-height:120px;}
+  .res-big{font-size: clamp(22px, 6vw, 28px); margin-bottom:6px;}
+  .res-sub{font-size:14px; color:var(--fg-d)}
+  .glow-win{box-shadow: 0 0 0 0 rgba(41,240,176,0.45); animation:winPulse 900ms ease forwards}
+  .glow-lose{box-shadow: 0 0 0 0 rgba(255,76,109,0.45); animation:losePulse 900ms ease forwards}
+  @keyframes winPulse{50%{box-shadow:0 0 40px 6px rgba(41,240,176,0.45)} 100%{box-shadow:0 0 0 0 rgba(0,0,0,0)}}
+  @keyframes losePulse{50%{box-shadow:0 0 40px 6px rgba(255,76,109,0.45)} 100%{box-shadow:0 0 0 0 rgba(0,0,0,0)}}
+
+  /* ---------- ACTION BAR ---------- */
+  .action-bar{
+    display:flex; gap:12px; align-items:center;
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  .action-btn{
+    flex:1; min-height:64px; padding:14px 16px;
+    border-radius:16px; border:1px solid var(--border); cursor:pointer; user-select:none;
+    background: linear-gradient(180deg, #1a2330, #121923);
+    box-shadow: 0 10px 24px rgba(0,0,0,0.35);
+    font-size: clamp(18px, 4vw, 22px); font-weight:900;
+    display:flex; justify-content:center; align-items:center; gap:10px;
+  }
+  .action-btn span{font-size: clamp(22px, 6vw, 28px)}
+  .action-btn.rock{outline:2px solid rgba(76,196,255,0.22)}
+  .action-btn.scissors{outline:2px solid rgba(138,99,255,0.25)}
+  .action-btn.paper{outline:2px solid rgba(41,240,176,0.25)}
+  .action-btn:hover{filter:brightness(1.08)}
+  .action-btn:active{transform:translateY(1px)}
+
+  /* ---------- OVERLAYS ---------- */
+  .overlay{position:absolute; inset:0; display:none; align-items:center; justify-content:center; background:#0007; backdrop-filter:blur(6px)}
+  .box{width:min(620px,92vw); padding:16px; background: linear-gradient(180deg,var(--panel),var(--panel2)); border:1px solid var(--border); border-radius:18px; box-shadow:0 30px 60px rgba(0,0,0,0.5);}
+  .box h2{margin:0 0 8px}
+  .box .grid{grid-template-columns:1fr}
+
+  /* ---------- ONLINE ROOM UI ---------- */
+  input[type="text"], input[type="number"], textarea{
+    background: #0f1624; color: var(--fg); border:1px solid var(--border); border-radius:12px;
+    padding:10px 12px; outline:none; font-size:16px; width:100%;
+  }
+
+  /* ---------- Responsive ---------- */
+  @media (max-width:980px){
+    .grid{grid-template-columns: 1fr}
+    .action-btn{min-height:56px; padding:12px}
+    .center-res{min-height:96px}
+  }
+  @media (max-height:560px){
+    .center-res{min-height:84px}
+    .action-btn{min-height:52px}
+  }
+</style>
+</head>
+<body>
+
+<!-- ============ LOADING (3s) ============ -->
+<section id="loading" class="screen">
+  <div class="panel loading-wrap">
+    <div class="logo"><div class="mark"></div><div style="font-weight:900;" data-i18n="brand">QuickPlay Games</div></div>
+    <div class="title" data-i18n="title">ROCK · PAPER · SCISSORS</div>
+    <div class="dots" id="dots" data-i18n="loading">Loading...</div>
+    <div class="spinner"></div>
+    <div class="small" style="margin-top:8px;" data-i18n="studioNote">Мінімалізм, неон, швидкі матчі.</div>
+  </div>
+</section>
+
+<!-- ============ MENU ============ -->
+<section id="menu" class="screen">
+  <div class="panel" style="position:relative;">
+    <div class="menu-header">
+      <div class="brand"><div class="mark"></div><div data-i18n="brand">QuickPlay Games</div></div>
+      <div class="row small">
+        <span data-i18n="sound">Звук</span>: <span id="soundState">ON</span>
+        <button class="btn" id="btnLang">🌐 <span id="langVal">Українська</span></button>
+        <button class="btn" id="btnTheme">🎨 <span data-i18n="theme">Тема</span>: <span id="themeVal">Dark</span></button>
+      </div>
+    </div>
+
+    <h2 style="margin:0 0 6px;" data-i18n="title">ROCK · PAPER · SCISSORS</h2>
+    <div class="small" data-i18n="menuDesc">Класика з сучасним неон-стилем. Обери режим: проти ШІ або онлайн‑кімнати.</div>
+
+    <div class="grid">
+      <button class="btn primary" id="btnPlay" data-i18n="play">Грати</button>
+      <button class="btn" id="btnAI"><span data-i18n="vsAI">Проти ШІ</span> · <span data-i18n="difficulty">Складність</span>: <span id="aiDiff">Normal</span></button>
+      <button class="btn" id="btnOnline" data-i18n="onlineRooms">Онлайн: кімнати</button>
+      <button class="btn" id="btnSound"><span data-i18n="sound">Звук</span>: <span id="soundLabel">Увімк</span></button>
+      <button class="btn danger" id="btnReset" data-i18n="reset">Перезапуск (скинути рекорди)</button>
+      <div class="btn">
+        <div class="small" data-i18n="controlsHint">ПК: 1 — 🪨, 2 — ✂️, 3 — 📄 · Мобільні: великі кнопки. Рахунок і серія зберігаються; онлайн — лобі та таймер.</div>
+      </div>
+    </div>
+
+    <!-- Вибір режиму -->
+    <div id="modeOverlay" class="overlay">
+      <div class="box">
+        <h2 data-i18n="chooseMode">Вибір режиму</h2>
+        <div class="grid">
+          <button class="btn primary" id="mAI" data-i18n="vsAI">Проти ШІ</button>
+          <button class="btn" id="mOnline" data-i18n="onlineRooms">Онлайн: кімнати</button>
+          <button class="btn danger" id="mCancel" data-i18n="cancel">Скасувати</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Онлайн меню -->
+    <div id="onlineOverlay" class="overlay">
+      <div class="box">
+        <h2 data-i18n="onlineRooms">Онлайн: кімнати</h2>
+        <div class="grid">
+          <button class="btn primary" id="oLocal" data-i18n="localRooms">Локальні кімнати (авто “за кодом”)</button>
+          <button class="btn" id="oP2P" data-i18n="p2pBeta">P2P Beta (без сервера; копі‑пейст кодів)</button>
+          <button class="btn danger" id="oClose" data-i18n="close">Закрити</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Локальна кімната -->
+    <div id="localRoomOverlay" class="overlay">
+      <div class="box">
+        <h2 data-i18n="localRoomTitle">Локальна кімната (цей браузер)</h2>
+        <div class="row">
+          <input type="text" id="localName" placeholder="Ваш нік" />
+        </div>
+        <div class="grid" style="margin-top:8px;">
+          <div class="btn">
+            <div class="small" data-i18n="localCreateDesc">Створити: назва + код (5–8 символів) або порожньо — згенеруємо.</div>
+            <div class="row">
+              <input type="text" id="localRoomName" placeholder="Назва кімнати" />
+              <input type="text" id="localRoomCode" placeholder="Код (наприклад, QP123)" maxlength="8" />
+              <button class="btn primary" id="localCreate" data-i18n="create">Створити</button>
+            </div>
+          </div>
+          <div class="btn">
+            <div class="small" data-i18n="localJoinDesc">Знайти: введіть код кімнати — приєднаємось автоматично.</div>
+            <div class="row">
+              <input type="text" id="localJoinCode" placeholder="Код кімнати" maxlength="8" />
+              <button class="btn" id="localJoin" data-i18n="join">Приєднатися</button>
+            </div>
+          </div>
+          <button class="btn danger" id="localClose" data-i18n="back">Назад</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- P2P Beta -->
+    <div id="p2pOverlay" class="overlay">
+      <div class="box">
+        <h2>P2P Beta</h2>
+        <div class="small" data-i18n="p2pDesc">1) Створити → Скопіюй «Offer» і передай супернику. 2) Встав «Answer» від суперника. Або: Приєднатися → Встав «Offer» → Згенеруй «Answer» і передай творцю.</div>
+        <div class="grid" style="margin-top:8px;">
+          <div class="btn">
+            <div class="small" data-i18n="yourNick">Ваш нік</div>
+            <input id="p2pName" type="text" placeholder="Ваш нік"/>
+          </div>
+          <div class="btn">
+            <div class="row">
+              <button class="btn primary" id="p2pCreate" data-i18n="createOffer">Створити (Offer)</button>
+              <button class="btn" id="p2pJoin" data-i18n="joinOffer">Приєднатися (маю Offer)</button>
+            </div>
+            <div class="small" style="margin-top:6px;">SDP:</div>
+            <textarea id="p2pBox" style="width:100%;height:140px;"></textarea>
+            <div class="row" style="margin-top:6px;">
+              <button class="btn" id="p2pAccept" data-i18n="insertAnswer">Вставити відповідь</button>
+              <button class="btn danger" id="p2pClose" data-i18n="close">Закрити</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<!-- ============ GAME ============ -->
+<section id="game" class="screen">
+  <div class="panel" style="position:relative;">
+    <div class="menu-header">
+      <div class="brand"><div class="mark"></div><div>QuickPlay · RPS</div></div>
+      <div class="small" id="hint" data-i18n="hintPC">ПК: 1 · 2 · 3 · ESC — пауза</div>
+    </div>
+
+    <div class="game-wrap">
+      <!-- HUD -->
+      <div class="hud">
+        <div class="pill"><span data-i18n="mode">Режим</span>: <span id="modeLabel">AI</span></div>
+        <div class="pill"><span data-i18n="score">Очки</span>: <span id="score">0</span></div>
+        <div class="pill"><span data-i18n="streak">Серія</span>: <span id="streak">0</span></div>
+        <div class="pill"><span data-i18n="best">Рекорд</span>: <span id="best">0</span></div>
+        <div class="pill" id="timerWrap" style="display:none;"><span data-i18n="timer">Таймер</span>: <span class="timer" id="timerVal">10.0</span>s</div>
+        <button class="btn" id="btnPause" data-i18n="pause">Пауза</button>
+      </div>
+
+      <!-- Center Result -->
+      <div class="center-res" id="centerBox">
+        <div class="res-big" id="resultText" data-i18n="makeChoice">Зроби вибір</div>
+        <div class="res-sub" id="roundInfo">🪨 / ✂️ / 📄</div>
+      </div>
+
+      <!-- Action Bar -->
+      <div class="action-bar">
+        <div class="action-btn rock" id="btnRock"><span>🪨</span> <span data-i18n="rock">Камінь</span> <small style="opacity:.65;">(1)</small></div>
+        <div class="action-btn scissors" id="btnScissors"><span>✂️</span> <span data-i18n="scissors">Ножиці</span> <small style="opacity:.65;">(2)</small></div>
+        <div class="action-btn paper" id="btnPaper"><span>📄</span> <span data-i18n="paper">Папір</span> <small style="opacity:.65;">(3)</small></div>
+      </div>
+    </div>
+
+    <!-- Pause -->
+    <div id="pauseOverlay" class="overlay">
+      <div class="box">
+        <h2 data-i18n="pause">Пауза</h2>
+        <div class="grid">
+          <button class="btn primary" id="btnContinue" data-i18n="continue">▶ Продовжити</button>
+          <button class="btn" id="btnRestartRun" data-i18n="restartMatch">🔁 Рестарт матчу</button>
+          <button class="btn danger" id="btnBackMenu" data-i18n="backMenu">❌ В меню</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Result -->
+    <div id="resultOverlay" class="overlay">
+      <div class="box">
+        <h2 id="resTitle" data-i18n="matchEnded">Матч завершено</h2>
+        <div class="small">
+          <span data-i18n="score">Очки</span>: <b id="resScore">0</b> ·
+          <span data-i18n="streak">Серія</span>: <b id="resStreak">0</b> ·
+          <span data-i18n="best">Рекорд</span>: <b id="resBest">0</b>
+        </div>
+        <div class="grid" style="margin-top:10px;">
+          <button class="btn primary" id="btnAgain" data-i18n="playAgain">▶ Зіграти ще</button>
+          <button class="btn danger" id="btnToMenu" data-i18n="backMenu">❌ В меню</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ONLINE LOBBY -->
+    <div id="lobbyOverlay" class="overlay">
+      <div class="box">
+        <h2 id="lobbyTitle" data-i18n="room">Кімната</h2>
+        <div class="small" id="lobbyInfo"><span data-i18n="players">Гравців</span>: <span id="lobbyCount">1</span> / 5 · <span data-i18n="code">Код</span>: <b id="lobbyCode"></b></div>
+        <div class="row" style="margin-top:8px;">
+          <div class="btn" style="flex:1;">
+            <div class="small" data-i18n="choiceTimer">Таймер вибору (сек):</div>
+            <input id="lobbyTimer" type="number" min="1" max="30" value="10"/>
+          </div>
+          <div class="btn" style="flex:1;">
+            <div class="small" data-i18n="maxPlayers">Макс. учасників (2..5):</div>
+            <input id="lobbyMax" type="number" min="2" max="5" value="5"/>
+          </div>
+        </div>
+        <div class="grid">
+          <button class="btn primary" id="lobbyStart" data-i18n="startRound">▶ Почати раунд</button>
+          <button class="btn" id="lobbyLeave" data-i18n="leaveRoom">Вийти з кімнати</button>
+        </div>
+        <div class="small" style="margin-top:6px;" data-i18n="timerHint">Підказка: якщо не зробити вибір до завершення таймера — ви вилітаєте з раунду.</div>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<script>
+/* ============================================================
+   RPS — i18n (RU/UK/EN) + Themes (Dark/Light/Neon)
+   AI + Online (Local rooms + P2P Beta)
+   ============================================================ */
+(function(){
+  "use strict";
+
+  /* ---------- i18n ---------- */
+  const LS_LANG='qpg_rps_lang', LS_THEME='qpg_rps_theme';
+  const i18n={
+    uk:{brand:'QuickPlay Games', title:'ROCK · PAPER · SCISSORS', loading:'Loading...', studioNote:'Мінімалізм, неон, швидкі матчі.',
+        sound:'Звук', theme:'Тема', play:'Грати', menuDesc:'Класика з сучасним неон-стилем. Обери режим: проти ШІ або онлайн‑кімнати.',
+        vsAI:'Проти ШІ', difficulty:'Складність', onlineRooms:'Онлайн: кімнати', reset:'Перезапуск (скинути рекорди)',
+        controlsHint:'ПК: 1 — 🪨, 2 — ✂️, 3 — 📄 · Мобільні: великі кнопки. Рахунок і серія зберігаються; онлайн — лобі та таймер.',
+        chooseMode:'Вибір режиму', cancel:'Скасувати', localRooms:'Локальні кімнати (авто “за кодом”)', p2pBeta:'P2P Beta (без сервера; копі‑пейст кодів)', close:'Закрити',
+        localRoomTitle:'Локальна кімната (цей браузер)', localCreateDesc:'Створити: назва + код (5–8 символів) або порожньо — згенеруємо.', create:'Створити',
+        localJoinDesc:'Знайти: введіть код кімнати — приєднаємось автоматично.', join:'Приєднатися', back:'Назад',
+        p2pDesc:'1) Створити → Скопіюй «Offer» і передай супернику. 2) Встав «Answer» від суперника. Або: Приєднатися → Встав «Offer» → Згенеруй «Answer» і передай творцю.',
+        yourNick:'Ваш нік', createOffer:'Створити (Offer)', joinOffer:'Приєднатися (маю Offer)', insertAnswer:'Вставити відповідь',
+        hintPC:'ПК: 1 · 2 · 3 · ESC — пауза', hintMobile:'Торкнись кнопки · Пауза — кнопка',
+        mode:'Режим', score:'Очки', streak:'Серія', best:'Рекорд', timer:'Таймер', pause:'Пауза', continue:'▶ Продовжити', restartMatch:'🔁 Рестарт матчу', backMenu:'❌ В меню',
+        matchEnded:'Матч завершено', playAgain:'▶ Зіграти ще', makeChoice:'Зроби вибір', rock:'Камінь', scissors:'Ножиці', paper:'Папір',
+        room:'Кімната', players:'Гравців', code:'Код', choiceTimer:'Таймер вибору (сек):', maxPlayers:'Макс. учасників (2..5):', startRound:'▶ Почати раунд', leaveRoom:'Вийти з кімнати', timerHint:'Підказка: якщо не зробити вибір до завершення таймера — ви вилітаєте з раунду.',
+        langLabel:'Українська', themeDark:'Dark', themeLight:'Light', themeNeon:'Neon',
+        alertEnterCode:'Введіть код кімнати', alertRoomFull:'Кімната повна', alertResetOk:'Ок. Рекорд скинуто.', p2pOfferInfo:'Скопіюй Offer і передай супернику. Потім встав Answer.', p2pAnswerInfo:'Скопіюй Answer і передай творцю.', p2pConnected:'Зʼєднано! Закрий це вікно — і грай.',
+        youDidNotPick:'Не вибрав — виліт', youWin:'Ти переміг!', youLose:'Ти програв', draw:'Нічия', top:'Топ'
+    },
+    ru:{brand:'QuickPlay Games', title:'ROCK · PAPER · SCISSORS', loading:'Загрузка...', studioNote:'Минимализм, неон, быстрые матчи.',
+        sound:'Звук', theme:'Тема', play:'Играть', menuDesc:'Классика в современном неон-стиле. Выбери режим: против ИИ или онлайн-комнаты.',
+        vsAI:'Против ИИ', difficulty:'Сложность', onlineRooms:'Онлайн: комнаты', reset:'Перезапуск (сбросить рекорд)',
+        controlsHint:'ПК: 1 — 🪨, 2 — ✂️, 3 — 📄 · Мобильные: крупные кнопки. Рекорд и серия сохраняются; онлайн — лобби и таймер.',
+        chooseMode:'Выбор режима', cancel:'Отмена', localRooms:'Локальные комнаты (авто “по коду”)', p2pBeta:'P2P Beta (без сервера; копи‑паст кодов)', close:'Закрыть',
+        localRoomTitle:'Локальная комната (этот браузер)', localCreateDesc:'Создать: название + код (5–8 символов) или пусто — сгенерируем.', create:'Создать',
+        localJoinDesc:'Найти: введите код комнаты — подключимся автоматически.', join:'Присоединиться', back:'Назад',
+        p2pDesc:'1) Создать → Скопируй «Offer» и передай сопернику. 2) Вставь «Answer» от соперника. Или: Присоединиться → Вставь «Offer» → Сгенерируй «Answer» и передай создателю.',
+        yourNick:'Ваш ник', createOffer:'Создать (Offer)', joinOffer:'Присоединиться (есть Offer)', insertAnswer:'Вставить ответ',
+        hintPC:'ПК: 1 · 2 · 3 · ESC — пауза', hintMobile:'Касайся кнопок · Пауза — кнопка',
+        mode:'Режим', score:'Очки', streak:'Серия', best:'Рекорд', timer:'Таймер', pause:'Пауза', continue:'▶ Продолжить', restartMatch:'🔁 Рестарт матча', backMenu:'❌ В меню',
+        matchEnded:'Матч завершён', playAgain:'▶ Сыграть ещё', makeChoice:'Сделай выбор', rock:'Камень', scissors:'Ножницы', paper:'Бумага',
+        room:'Комната', players:'Игроков', code:'Код', choiceTimer:'Таймер выбора (сек):', maxPlayers:'Макс. игроков (2..5):', startRound:'▶ Начать раунд', leaveRoom:'Выйти из комнаты', timerHint:'Подсказка: если не сделать выбор до конца таймера — вы выбываете из раунда.',
+        langLabel:'Русский', themeDark:'Dark', themeLight:'Light', themeNeon:'Neon',
+        alertEnterCode:'Введите код комнаты', alertRoomFull:'Комната заполнена', alertResetOk:'Ок. Рекорд сброшен.', p2pOfferInfo:'Скопируй Offer и передай сопернику. Затем вставь Answer.', p2pAnswerInfo:'Скопируй Answer и передай создателю.', p2pConnected:'Соединено! Закрой окно — и играй.',
+        youDidNotPick:'Не выбрал — вылет', youWin:'Ты победил!', youLose:'Ты проиграл', draw:'Ничья', top:'Топ'
+    },
+    en:{brand:'QuickPlay Games', title:'ROCK · PAPER · SCISSORS', loading:'Loading...', studioNote:'Minimal, neon, fast rounds.',
+        sound:'Sound', theme:'Theme', play:'Play', menuDesc:'Classic with modern neon style. Choose AI or Online rooms.',
+        vsAI:'Play vs AI', difficulty:'Difficulty', onlineRooms:'Online Rooms', reset:'Restart (reset record)',
+        controlsHint:'PC: 1 — 🪨, 2 — ✂️, 3 — 📄 · Mobile: large buttons. Score & streak saved; online — lobby & timer.',
+        chooseMode:'Choose Mode', cancel:'Cancel', localRooms:'Local Rooms (auto “by code”)', p2pBeta:'P2P Beta (no server; copy/paste codes)', close:'Close',
+        localRoomTitle:'Local Room (this browser)', localCreateDesc:'Create: name + code (5–8 chars) or empty — auto.', create:'Create',
+        localJoinDesc:'Join: enter room code — auto connect.', join:'Join', back:'Back',
+        p2pDesc:'1) Create → Copy «Offer» and send. 2) Paste «Answer». Or: Join → Paste «Offer» → Generate «Answer» and send back.',
+        yourNick:'Your nick', createOffer:'Create (Offer)', joinOffer:'Join (have Offer)', insertAnswer:'Paste Answer',
+        hintPC:'PC: 1 · 2 · 3 · ESC — pause', hintMobile:'Tap buttons · Pause button',
+        mode:'Mode', score:'Score', streak:'Streak', best:'Best', timer:'Timer', pause:'Pause', continue:'▶ Continue', restartMatch:'🔁 Restart match', backMenu:'❌ Menu',
+        matchEnded:'Match ended', playAgain:'▶ Play again', makeChoice:'Make your choice', rock:'Rock', scissors:'Scissors', paper:'Paper',
+        room:'Room', players:'Players', code:'Code', choiceTimer:'Choice timer (sec):', maxPlayers:'Max players (2..5):', startRound:'▶ Start round', leaveRoom:'Leave room', timerHint:'Hint: if you don’t choose before timer ends — you drop from the round.',
+        langLabel:'English', themeDark:'Dark', themeLight:'Light', themeNeon:'Neon',
+        alertEnterCode:'Enter room code', alertRoomFull:'Room is full', alertResetOk:'OK. Record reset.', p2pOfferInfo:'Copy Offer and send to opponent. Then paste Answer.', p2pAnswerInfo:'Copy Answer and send back.', p2pConnected:'Connected! Close this window and play.',
+        youDidNotPick:'No choice — dropped', youWin:'You win!', youLose:'You lose', draw:'Draw', top:'Top'
+    }
+  };
+  let LANG = localStorage.getItem(LS_LANG) || 'uk';
+  let THEME = localStorage.getItem(LS_THEME) || 'dark';
+  const THEMES = ['dark','light','neon'];
+
+  function t(k){ return (i18n[LANG] && i18n[LANG][k]) || k; }
+  function applyI18N(){
+    document.querySelectorAll('[data-i18n]').forEach(el=>{
+      const k = el.getAttribute('data-i18n'); el.textContent = t(k);
+    });
+    document.getElementById('langVal').textContent = t('langLabel');
+    document.getElementById('themeVal').textContent = (THEME==='dark'? t('themeDark') : THEME==='light'? t('themeLight') : t('themeNeon'));
+  }
+  function applyTheme(){
+    document.body.classList.remove('theme-light','theme-neon');
+    if(THEME==='light') document.body.classList.add('theme-light');
+    else if(THEME==='neon') document.body.classList.add('theme-neon');
+  }
+
+  /* ---------- Helpers ---------- */
+  const $ = (sel)=>document.querySelector(sel);
+  const byId = (id)=>document.getElementById(id);
+  const clamp=(v,a,b)=>Math.min(Math.max(v,a),b);
+  const now=()=>performance.now();
+  const pick=(arr)=>arr[Math.floor(Math.random()*arr.length)];
+  const isTouch = ('ontouchstart' in window) || navigator.maxTouchPoints>0;
+
+  /* ---------- Storage ---------- */
+  const K='qpg_rps_profile_v3';
+  const profile={ bestAI:0, sound:true };
+  try{ const r=localStorage.getItem(K); if(r) Object.assign(profile, JSON.parse(r)); }catch(e){}
+  const save=()=>{ try{ localStorage.setItem(K, JSON.stringify(profile)); }catch(e){} };
+
+  /* ---------- Screens ---------- */
+  const screens={ loading:$('#loading'), menu:$('#menu'), game:$('#game') };
+  const showScreen=(id)=>{ Object.values(screens).forEach(el=>el.style.display='none'); screens[id].style.display='flex'; applyI18N(); };
+
+  /* ---------- Loading 3s ---------- */
+  (function dots(){ const el=$('#dots'); let i=0; setInterval(()=>{ i=(i+1)%4; el.textContent=t('loading').replace('...','') + '.'.repeat(i); }, 280); })();
+  setTimeout(()=>{ $('#loading').classList.add('fade-out'); setTimeout(()=> showScreen('menu'), 820); }, 3000);
+
+  /* ---------- Audio ---------- */
+  const audio={
+    ctx:null, enabled(){return profile.sound}, ensure(){ if(!this.ctx){ this.ctx=new (window.AudioContext||window.webkitAudioContext)(); } },
+    click(){ if(!this.enabled())return; this.ensure(); const t0=this.ctx.currentTime, o=this.ctx.createOscillator(), g=this.ctx.createGain();
+      o.type='square'; o.frequency.setValueAtTime(440,t0); o.frequency.exponentialRampToValueAtTime(300,t0+0.08);
+      g.gain.setValueAtTime(0.0001,t0); g.gain.exponentialRampToValueAtTime(0.25,t0+0.02); g.gain.exponentialRampToValueAtTime(0.0001,t0+0.12);
+      o.connect(g).connect(this.ctx.destination); o.start(t0); o.stop(t0+0.13); },
+    win(){ if(!this.enabled())return; this.ensure(); const t0=this.ctx.currentTime, o=this.ctx.createOscillator(), g=this.ctx.createGain();
+      o.type='sine'; o.frequency.setValueAtTime(660,t0); o.frequency.exponentialRampToValueAtTime(880,t0+0.15);
+      g.gain.setValueAtTime(0.0001,t0); g.gain.exponentialRampToValueAtTime(0.35,t0+0.05); g.gain.exponentialRampToValueAtTime(0.0001,t0+0.35);
+      o.connect(g).connect(this.ctx.destination); o.start(t0); o.stop(t0+0.36); },
+    lose(){ if(!this.enabled())return; this.ensure(); const t0=this.ctx.currentTime, o=this.ctx.createOscillator(), g=this.ctx.createGain();
+      o.type='sine'; o.frequency.setValueAtTime(300,t0); o.frequency.exponentialRampToValueAtTime(220,t0+0.2);
+      g.gain.setValueAtTime(0.0001,t0); g.gain.exponentialRampToValueAtTime(0.35,t0+0.06); g.gain.exponentialRampToValueAtTime(0.0001,t0+0.36);
+      o.connect(g).connect(this.ctx.destination); o.start(t0); o.stop(t0+0.38); }
+  };
+
+  /* ---------- Menu ---------- */
+  applyTheme(); applyI18N();
+  byId('soundState').textContent = profile.sound?'ON':'OFF';
+  byId('soundLabel').textContent = profile.sound ? (LANG==='en'?'On':LANG==='ru'?'Вкл':'Увімк') : (LANG==='en'?'Off':LANG==='ru'?'Выкл':'Вимк');
+
+  $('#btnSound').addEventListener('click',()=>{ profile.sound=!profile.sound; save();
+    byId('soundState').textContent=profile.sound?'ON':'OFF';
+    byId('soundLabel').textContent = profile.sound ? (LANG==='en'?'On':LANG==='ru'?'Вкл':'Увімк') : (LANG==='en'?'Off':LANG==='ru'?'Выкл':'Вимк');
+    audio.click();
+  });
+
+  $('#btnLang').addEventListener('click',()=>{
+    LANG = (LANG==='uk'?'ru':LANG==='ru'?'en':'uk'); localStorage.setItem(LS_LANG, LANG);
+    applyI18N();
+  });
+
+  $('#btnTheme').addEventListener('click',()=>{
+    const i=THEMES.indexOf(THEME); THEME = THEMES[(i+1)%THEMES.length];
+    localStorage.setItem(LS_THEME, THEME); applyTheme(); applyI18N();
+  });
+
+  const aiOrder=['Easy','Normal','Hard']; let aiIdx=1;
+  const setAIDiff=()=>{ byId('aiDiff').textContent = aiOrder[aiIdx]; }; setAIDiff();
+  $('#btnAI').addEventListener('click',()=>{ aiIdx=(aiIdx+1)%aiOrder.length; setAIDiff(); audio.click(); });
+
+  const modeOverlay=$('#modeOverlay'); const onlineOverlay=$('#onlineOverlay');
+  $('#btnPlay').addEventListener('click',()=>{ modeOverlay.style.display='flex'; audio.click(); });
+  $('#mAI').addEventListener('click',()=>{ modeOverlay.style.display='none'; startMatchAI(); });
+  $('#mOnline').addEventListener('click',()=>{ modeOverlay.style.display='none'; onlineOverlay.style.display='flex'; });
+  $('#mCancel').addEventListener('click',()=>{ modeOverlay.style.display='none'; });
+
+  $('#btnOnline').addEventListener('click',()=>{ onlineOverlay.style.display='flex'; audio.click(); });
+  $('#oClose').addEventListener('click',()=>{ onlineOverlay.style.display='none'; });
+
+  $('#btnReset').addEventListener('click',()=>{
+    if(confirm(t('reset'))){ profile.bestAI=0; save(); alert(t('alertResetOk')); }
+  });
+
+  /* ---------- Match: AI ---------- */
+  let match=null, hotKeysOn=false;
+  const R= { ROCK:'rock', SCISSORS:'scissors', PAPER:'paper' };
+  const beats = { rock:'scissors', scissors:'paper', paper:'rock' };
+
+  function startMatchAI(){
+    showScreen('game'); audio.click();
+    byId('modeLabel').textContent = `${t('vsAI')} (${aiOrder[aiIdx]})`;
+    byId('best').textContent = profile.bestAI;
+    byId('timerWrap').style.display = 'none';
+    byId('hint').textContent = isTouch ? t('hintMobile') : t('hintPC');
+    match = { score:0, streak:0, best: profile.bestAI, lastPlayer:null, waitForPick:true };
+    updateHUD(); setCenter(t('makeChoice'),'🪨 / ✂️ / 📄');
+    enableHotkeys(true); bindButtonsAI();
+  }
+  function updateHUD(){
+    byId('score').textContent = match.score;
+    byId('streak').textContent= match.streak;
+    byId('best').textContent  = profile.bestAI;
+  }
+  function setCenter(main, sub){
+    const c=byId('centerBox'); byId('resultText').textContent=main; byId('roundInfo').textContent=sub||''; c.classList.remove('glow-win','glow-lose');
+  }
+  function bindButtonsAI(){
+    const playPick = (val)=>{ if(!match || !match.waitForPick) return; resolveRoundAI(val); };
+    $('#btnRock').onclick=()=>playPick(R.ROCK);
+    $('#btnScissors').onclick=()=>playPick(R.SCISSORS);
+    $('#btnPaper').onclick=()=>playPick(R.PAPER);
+  }
+  function enableHotkeys(on){
+    const hk=(e)=>{
+      if(['Digit1','Digit2','Digit3','Escape'].includes(e.code)){ e.preventDefault(); e.stopPropagation(); }
+      if(e.code==='Digit1') $('#btnRock').click();
+      if(e.code==='Digit2') $('#btnScissors').click();
+      if(e.code==='Digit3') $('#btnPaper').click();
+      if(e.code==='Escape') $('#btnPause').click();
+    };
+    if(on && !hotKeysOn){ hotKeysOn=true; window.addEventListener('keydown',hk,true); }
+    else if(!on && hotKeysOn){ hotKeysOn=false; window.removeEventListener('keydown',hk,true); }
+  }
+  function aiPick(playerPrev){
+    const d=aiOrder[aiIdx];
+    if(d==='Easy') return pick([R.ROCK,R.SCISSORS,R.PAPER]);
+    if(d==='Normal'){
+      const base=[R.ROCK,R.SCISSORS,R.PAPER];
+      if(playerPrev){ const counter=counterOf(playerPrev); base.push(counter,counter); }
+      return pick(base);
+    }
+    const base=[R.ROCK,R.SCISSORS,R.PAPER];
+    if(playerPrev){ const counter=counterOf(playerPrev); base.push(counter,counter,counter); }
+    return pick(base);
+  }
+  function counterOf(v){
+    if(v===R.ROCK) return R.PAPER;
+    if(v===R.SCISSORS) return R.ROCK;
+    return R.SCISSORS;
+  }
+  function resolveRoundAI(playerChoice){
+    audio.click();
+    match.waitForPick=false;
+    const ai = aiPick(match.lastPlayer);
+    match.lastPlayer = playerChoice;
+    const res = outcome(playerChoice, ai);
+    if(res>0){ match.score+=1; match.streak+=1; showResult(t('youWin'), `${t('youWin')}: ${icon(playerChoice)} · AI: ${icon(ai)}`, true); audio.win(); }
+    else if(res<0){ match.streak=0; showResult(t('youLose'), `${t('youLose')}: ${icon(playerChoice)} · AI: ${icon(ai)}`, false); audio.lose(); }
+    else { showResult(t('draw'), `You: ${icon(playerChoice)} · AI: ${icon(ai)}`); }
+    updateHUD();
+    profile.bestAI=Math.max(profile.bestAI, match.score); save(); byId('best').textContent=profile.bestAI;
+    setTimeout(()=>{ match.waitForPick=true; setCenter(t('makeChoice'),'🪨 / ✂️ / 📄'); }, 700);
+  }
+  function outcome(a,b){ if(a===b) return 0; return (beats[a]===b)? +1 : -1; }
+  function icon(v){ return v===R.ROCK?'🪨': (v===R.SCISSORS?'✂️':'📄'); }
+  function showResult(main, sub, win=null){
+    setCenter(main,sub);
+    const c=byId('centerBox');
+    if(win===true){ c.classList.add('glow-win'); c.classList.remove('glow-lose'); }
+    else if(win===false){ c.classList.add('glow-lose'); c.classList.remove('glow-win'); }
+  }
+
+  // Pause/Result
+  const pauseO=$('#pauseOverlay'), resultO=$('#resultOverlay');
+  $('#btnPause').addEventListener('click',togglePause);
+  $('#btnContinue').addEventListener('click',togglePause);
+  $('#btnRestartRun').addEventListener('click',()=>{ resultO.style.display='none'; pauseO.style.display='none'; startMatchAI(); });
+  $('#btnBackMenu').addEventListener('click',()=>{ resultO.style.display='none'; pauseO.style.display='none'; showScreen('menu'); match=null; });
+  $('#btnAgain').addEventListener('click',()=>{ resultO.style.display='none'; startMatchAI(); });
+  $('#btnToMenu').addEventListener('click',()=>{ resultO.style.display='none'; showScreen('menu'); match=null; });
+  function togglePause(){
+    if(!match) return;
+    if(resultO.style.display==='flex') return;
+    pauseO.style.display = (pauseO.style.display==='flex') ? 'none' : 'flex';
+  }
+
+  /* ---------- Онлайн: Локальні кімнати ---------- */
+  const localUI={
+    overlay: $('#localRoomOverlay'),
+    name: byId('localName'), roomName: byId('localRoomName'), roomCode: byId('localRoomCode'),
+    joinCode: byId('localJoinCode'),
+    createBtn: byId('localCreate'), joinBtn: byId('localJoin'), closeBtn: byId('localClose')
+  };
+  const lobbyUI={
+    overlay: $('#lobbyOverlay'), title: byId('lobbyTitle'), info: byId('lobbyInfo'),
+    count: byId('lobbyCount'), code: byId('lobbyCode'),
+    timer: byId('lobbyTimer'), max: byId('lobbyMax'),
+    start: byId('lobbyStart'), leave: byId('lobbyLeave')
+  };
+  let localRoom=null;
+
+  $('#oLocal').addEventListener('click',()=>{ $('#onlineOverlay').style.display='none'; localUI.overlay.style.display='flex'; audio.click(); });
+  localUI.createBtn.addEventListener('click',()=>{
+    const nick = localUI.name.value.trim() || `Player${Math.floor(Math.random()*1000)}`;
+    const code = (localUI.roomCode.value.trim() || genCode()).toUpperCase();
+    const name = localUI.roomName.value.trim() || `Room ${code}`;
+    startLocalRoom('host', nick, name, code);
+  });
+  localUI.joinBtn.addEventListener('click',()=>{
+    const nick = localUI.name.value.trim() || `Player${Math.floor(Math.random()*1000)}`;
+    const code = (localUI.joinCode.value.trim()).toUpperCase();
+    if(!code){ alert(t('alertEnterCode')); return; }
+    startLocalRoom('guest', nick, null, code);
+  });
+  localUI.closeBtn.addEventListener('click',()=>{ localUI.overlay.style.display='none'; });
+
+  function genCode(){ const s='ABCDEFGHJKLMNPQRSTUVWXYZ0123456789'; let r='QP'; for(let i=0;i<3;i++) r+=s[Math.floor(Math.random()*s.length)]; return r; }
+
+  function startLocalRoom(role, nick, name, code){
+    audio.click();
+    localUI.overlay.style.display='none';
+    const ch = new BroadcastChannel(`RPS_LOCAL_${code}`);
+    showScreen('game'); byId('modeLabel').textContent='Online (Local)'; byId('hint').textContent=isTouch?t('hintMobile'):t('hintPC');
+    const me = { id:`u${Math.random().toString(36).slice(2,8)}`, nick, score:0, choice:null };
+    const state = {
+      role, code, name: name||'', me, max:5, timerSec:10,
+      players: {}, hostId: null, roundEnds:0, inRound:false
+    };
+    state.players[me.id]=me; if(role==='host'){ state.hostId = me.id; state.name = name; }
+    setupLobbyUI(state);
+
+    ch.onmessage = (ev)=> handleLocalMsg(ev.data);
+    ch.postMessage({t:'hello', from:me.id, nick:me.nick});
+    if(role==='host'){ setTimeout(()=>broadcastState(), 50); }
+
+    lobbyUI.start.onclick=()=>{ if(isHost()) startLocalRound(); };
+    lobbyUI.leave.onclick=()=>{ ch.postMessage({t:'leave', id:me.id}); ch.close(); localRoom=null; showScreen('menu'); };
+    lobbyUI.timer.onchange=()=>{ if(isHost()){ state.timerSec= clamp(parseInt(lobbyUI.timer.value||'10'),1,30); broadcastState(); } };
+    lobbyUI.max.onchange=()=>{ if(isHost()){ state.max= clamp(parseInt(lobbyUI.max.value||'5'),2,5); broadcastState(); } };
+
+    const sendPick=(choice)=>{ audio.click(); ch.postMessage({t:'pick', id:me.id, choice}); const meP=state.players[me.id]; if(meP) meP.choice = choice; setCenter(t('makeChoice'), icon(choice)); };
+    $('#btnRock').onclick=()=>sendPick('rock');
+    $('#btnScissors').onclick=()=>sendPick('scissors');
+    $('#btnPaper').onclick=()=>sendPick('paper');
+
+    function handleLocalMsg(m){
+      if(!m||!m.t) return;
+      if(m.t==='hello'){
+        if(Object.keys(state.players).length>=state.max){ ch.postMessage({t:'full'}); return; }
+        if(isHost()){
+          const p={ id:m.from, nick:m.nick||('Player'+m.from.slice(-3)), score:0, choice:null };
+          state.players[p.id]=p; broadcastState();
+        }else{
+          ch.postMessage({t:'reqState'});
+        }
+      }else if(m.t==='full'){
+        alert(t('alertRoomFull')); showScreen('menu');
+      }else if(m.t==='state'){
+        Object.assign(state, m.state); setupLobbyUI(state);
+      }else if(m.t==='reqState' && isHost()){
+        broadcastState();
+      }else if(m.t==='leave'){
+        delete state.players[m.id]; if(isHost()) broadcastState();
+      }else if(m.t==='startRound'){
+        state.inRound=true; state.roundEnds = m.ends;
+        Object.values(state.players).forEach(p=>{ p.choice=null; });
+        setupLobbyUI(state); runRoundTimer();
+        setCenter(t('makeChoice'), `🕒 ${state.timerSec}s`);
+      }else if(m.t==='pick'){
+        const p=state.players[m.id]; if(p) p.choice = m.choice;
+      }else if(m.t==='results'){
+        applyResults(m.results);
+      }
+    }
+    function isHost(){ return state.hostId===me.id; }
+    function broadcastState(){
+      ch.postMessage({t:'state', state:{
+        role:state.role, code:state.code, name:state.name, max:state.max, timerSec:state.timerSec,
+        players:state.players, hostId:state.hostId, inRound:state.inRound, roundEnds:state.roundEnds
+      }});
+      setupLobbyUI(state);
+    }
+    function setupLobbyUI(s){
+      $('#lobbyOverlay').style.display='flex';
+      lobbyUI.title.textContent = s.name ? `${t('room')}: ${s.name}` : t('room');
+      lobbyUI.count.textContent = Object.keys(s.players).length;
+      lobbyUI.code.textContent = s.code;
+      lobbyUI.timer.value = s.timerSec;
+      lobbyUI.max.value   = s.max;
+    }
+    function startLocalRound(){
+      state.inRound=true; state.roundEnds = now() + state.timerSec*1000;
+      Object.values(state.players).forEach(p=>{ p.choice=null; });
+      ch.postMessage({t:'startRound', ends: state.roundEnds}); runRoundTimer();
+      setCenter(t('makeChoice'), `🕒 ${state.timerSec}s`);
+    }
+    function runRoundTimer(){
+      if(!state.inRound) return;
+      const left = Math.max(0, (state.roundEnds - now())/1000);
+      byId('timerWrap').style.display=''; byId('timerVal').textContent = left.toFixed(1);
+      if(left>0){ requestAnimationFrame(runRoundTimer); }
+      else{ byId('timerWrap').style.display='none'; if(isHost()) computeResults(); }
+    }
+    function computeResults(){
+      const alive = Object.values(state.players).filter(p=>p.choice!=null);
+      const results = { winners:[], losers:[], ties:[], none:[] };
+      const choices = new Set(alive.map(p=>p.choice));
+      if(choices.size===0){ results.ties = Object.values(state.players).map(p=>p.id); }
+      else if(choices.size===1 || choices.size===3){ results.ties = alive.map(p=>p.id); }
+      else{
+        const arr=[...choices]; const wins = resolveMulti(arr[0], arr[1]);
+        results.winners = alive.filter(p=>p.choice===wins).map(p=>p.id);
+        results.losers  = alive.filter(p=>p.choice!==wins).map(p=>p.id);
+      }
+      const none = Object.values(state.players).filter(p=>p.choice==null).map(p=>p.id);
+      results.none = none;
+      for(const id of results.winners){ if(state.players[id]) state.players[id].score=(state.players[id].score||0)+1; }
+      ch.postMessage({t:'results', results}); applyResults(results); state.inRound=false; broadcastState();
+    }
+    function resolveMulti(a,b){
+      if(a===b) return a;
+      if(a==='rock'&&b==='scissors') return 'rock';
+      if(a==='scissors'&&b==='paper') return 'scissors';
+      if(a==='paper'&&b==='rock') return 'paper';
+      return resolveMulti(b,a);
+    }
+    function applyResults(res){
+      const my = state.players[me.id];
+      let text='';
+      if(res.none.includes(me.id)){ text=t('youDidNotPick'); audio.lose(); }
+      else if(res.winners.includes(me.id)){ text=t('youWin'); audio.win(); }
+      else if(res.losers.includes(me.id)){ text=t('youLose'); audio.lose(); }
+      else { text=t('draw'); }
+      const top = Object.values(state.players).sort((a,b)=>(b.score||0)-(a.score||0)).map(p=>`${p.nick}:${p.score||0}`).slice(0,5).join(' · ');
+      setCenter(text, `${t('top')}: ${top}`);
+    }
+
+    localRoom={ ch, state, me };
+  }
+
+  /* ---------- P2P Beta (WebRTC copy/paste) ---------- */
+  const rtc={ pc:null, dc:null, name:'',
+    async createOffer(){ this.pc=new RTCPeerConnection({iceServers:[{urls:'stun:stun.l.google.com:19302'}]}); this.dc=this.pc.createDataChannel('rps'); wireDC(this.dc);
+      const offer=await this.pc.createOffer(); await this.pc.setLocalDescription(offer); return btoa(JSON.stringify(offer)); },
+    async acceptAnswer(b64){ const ans=JSON.parse(atob(b64)); await this.pc.setRemoteDescription(new RTCSessionDescription(ans)); },
+    async acceptOffer(b64){ this.pc=new RTCPeerConnection({iceServers:[{urls:'stun:stun.l.google.com:19302'}]}); this.pc.ondatachannel=(e)=>{ this.dc=e.channel; wireDC(this.dc); };
+      const off=JSON.parse(atob(b64)); await this.pc.setRemoteDescription(new RTCSessionDescription(off)); const ans=await this.pc.createAnswer(); await this.pc.setLocalDescription(ans); return btoa(JSON.stringify(ans)); }
+  };
+  function wireDC(dc){ dc.onopen=()=>{ dc.send(JSON.stringify({t:'hello', name:rtc.name})); };
+    dc.onmessage=(e)=>{ const m=JSON.parse(e.data); if(m.t==='rps'){ p2pApply(m); } };
+  }
+  function p2pSend(m){ if(rtc.dc && rtc.dc.readyState==='open') rtc.dc.send(JSON.stringify(m)); }
+
+  const p2pUI={ overlay:$('#p2pOverlay'), name:byId('p2pName'), box:byId('p2pBox'),
+    create:byId('p2pCreate'), join:byId('p2pJoin'), accept:byId('p2pAccept'), close:byId('p2pClose') };
+  p2pUI.create.onclick=async()=>{ rtc.name=p2pUI.name.value.trim()||`Player${Math.floor(Math.random()*999)}`; const code=await rtc.createOffer(); p2pUI.box.value=code; alert(t('p2pOfferInfo')); };
+  p2pUI.join.onclick=async()=>{ rtc.name=p2pUI.name.value.trim()||`Player${Math.floor(Math.random()*999)}`; const offer=prompt('Offer:'); if(!offer) return; const answer=await rtc.acceptOffer(offer); p2pUI.box.value=answer; alert(t('p2pAnswerInfo')); };
+  p2pUI.accept.onclick=async()=>{ const ans=p2pUI.box.value.trim(); if(!ans){ alert(t('insertAnswer')); return; } await rtc.acceptAnswer(ans); alert(t('p2pConnected')); };
+  p2pUI.close.onclick=()=>{ p2pUI.overlay.style.display='none'; };
+
+  function p2pApply(m){ if(m.act==='result'){ setCenter(m.text, m.sub); if(m.win===true) audio.win(); else if(m.win===false) audio.lose(); } }
+
+  /* ---------- Init ---------- */
+  applyTheme(); applyI18N();
+
+})();
+</script>
+</body>
+</html>
