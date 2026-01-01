@@ -43,7 +43,8 @@
     font-family: Inter,system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,"Noto Sans",Arial;
     overflow:hidden; overscroll-behavior:none;
   }
-  .screen{position:absolute;inset:0;display:none;align-items:center;justify-content:center;padding:2vh 2vw;}
+  /* Критично для мобільних: 100svh, щоби враховувати системні панелі */
+  .screen{position:absolute;inset:0;display:none;align-items:center;justify-content:center;padding:2vh 2vw; min-height:100svh;}
   .panel{
     width:min(1100px,94vw); min-height:min(680px,88vh);
     background:
@@ -53,11 +54,12 @@
     border:1px solid var(--border); border-radius:22px; box-shadow:var(--shadow);
     backdrop-filter:blur(8px);
     padding: clamp(16px,2.6vw,28px);
+    display:flex; flex-direction:column;
   }
 
   /* ---------- LOADING ---------- */
   #loading{display:flex}
-  .loading-wrap{text-align:center; user-select:none;}
+  .loading-wrap{text-align:center; user-select:none; width:100%;}
   .logo{display:flex;align-items:center;gap:12px;justify-content:center;margin-bottom:6px;}
   .mark{width:42px;height:42px;border-radius:12px;transform:rotate(10deg);
         background:conic-gradient(from 210deg,var(--a)0 120deg,var(--a2)120deg 240deg,var(--ok)240deg 360deg);
@@ -104,6 +106,7 @@
   .game-wrap{
     display:grid; grid-template-rows: auto 1fr auto;
     gap:10px; min-height: calc(88vh - 60px);
+    flex:1;
   }
   .hud{display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap;}
   .pill{padding:8px 12px; border-radius:14px; border:1px solid var(--border); background:linear-gradient(180deg,#1b2432,#121923); font-weight:800; box-shadow:0 10px 20px rgba(0,0,0,0.35)}
@@ -115,13 +118,13 @@
   @keyframes winPulse{50%{box-shadow:0 0 40px 6px rgba(41,240,176,0.45)} 100%{box-shadow:0 0 0 0 rgba(0,0,0,0)}}
   @keyframes losePulse{50%{box-shadow:0 0 40px 6px rgba(255,76,109,0.45)} 100%{box-shadow:0 0 0 0 rgba(0,0,0,0)}}
 
-  /* ---------- ACTION BAR ---------- */
+  /* ---------- ACTION BAR (адаптивна) ---------- */
   .action-bar{
-    display:flex; gap:12px; align-items:center;
+    display:grid; grid-template-columns: repeat(3, 1fr); gap:12px; align-items:center;
     padding-bottom: env(safe-area-inset-bottom);
   }
   .action-btn{
-    flex:1; min-height:64px; padding:14px 16px;
+    min-height:64px; padding:14px 16px;
     border-radius:16px; border:1px solid var(--border); cursor:pointer; user-select:none;
     background: linear-gradient(180deg, #1a2330, #121923);
     box-shadow: 0 10px 24px rgba(0,0,0,0.35);
@@ -135,6 +138,18 @@
   .action-btn:hover{filter:brightness(1.08)}
   .action-btn:active{transform:translateY(1px)}
 
+  /* ——— Мобільний фікс: якщо мало місця — «Папір» на 2-й ряд повністю ——— */
+  @media (max-width:420px), (max-height:560px){
+    .action-bar{ grid-template-columns: repeat(2,1fr); }
+    .action-btn{ min-height:56px; padding:12px; }
+    .center-res{ min-height:96px; }
+    .action-btn.paper{ grid-column: 1 / -1; } /* ПАПІР — шириною на всю лінію */
+  }
+  @media (max-height:480px){
+    .center-res{min-height:84px}
+    .action-btn{min-height:52px}
+  }
+
   /* ---------- OVERLAYS ---------- */
   .overlay{position:absolute; inset:0; display:none; align-items:center; justify-content:center; background:#0007; backdrop-filter:blur(6px)}
   .box{width:min(620px,92vw); padding:16px; background: linear-gradient(180deg,var(--panel),var(--panel2)); border:1px solid var(--border); border-radius:18px; box-shadow:0 30px 60px rgba(0,0,0,0.5);}
@@ -145,17 +160,6 @@
   input[type="text"], input[type="number"], textarea{
     background: #0f1624; color: var(--fg); border:1px solid var(--border); border-radius:12px;
     padding:10px 12px; outline:none; font-size:16px; width:100%;
-  }
-
-  /* ---------- Responsive ---------- */
-  @media (max-width:980px){
-    .grid{grid-template-columns: 1fr}
-    .action-btn{min-height:56px; padding:12px}
-    .center-res{min-height:96px}
-  }
-  @media (max-height:560px){
-    .center-res{min-height:84px}
-    .action-btn{min-height:52px}
   }
 </style>
 </head>
@@ -192,6 +196,8 @@
       <button class="btn" id="btnAI"><span data-i18n="vsAI">Проти ШІ</span> · <span data-i18n="difficulty">Складність</span>: <span id="aiDiff">Normal</span></button>
       <button class="btn" id="btnOnline" data-i18n="onlineRooms">Онлайн: кімнати</button>
       <button class="btn" id="btnSound"><span data-i18n="sound">Звук</span>: <span id="soundLabel">Увімк</span></button>
+      <button class="btn" id="btnThrowFx">🎲 <span data-i18n="throwFx">Режим кидка (3‑2‑1)</span>: <span id="throwFxVal">ON</span></button>
+      <button class="btn" id="btnHaptics">📳 <span data-i18n="haptics">Вібрація</span>: <span id="hapticsVal">ON</span></button>
       <button class="btn danger" id="btnReset" data-i18n="reset">Перезапуск (скинути рекорди)</button>
       <div class="btn">
         <div class="small" data-i18n="controlsHint">ПК: 1 — 🪨, 2 — ✂️, 3 — 📄 · Мобільні: великі кнопки. Рахунок і серія зберігаються; онлайн — лобі та таймер.</div>
@@ -368,7 +374,7 @@
 
 <script>
 /* ============================================================
-   RPS — i18n (RU/UK/EN) + Themes (Dark/Light/Neon)
+   RPS — i18n (RU/UK/EN) + Themes (Dark/Light/Neon) + Throw FX
    AI + Online (Local rooms + P2P Beta)
    ============================================================ */
 (function(){
@@ -392,7 +398,8 @@
         room:'Кімната', players:'Гравців', code:'Код', choiceTimer:'Таймер вибору (сек):', maxPlayers:'Макс. учасників (2..5):', startRound:'▶ Почати раунд', leaveRoom:'Вийти з кімнати', timerHint:'Підказка: якщо не зробити вибір до завершення таймера — ви вилітаєте з раунду.',
         langLabel:'Українська', themeDark:'Dark', themeLight:'Light', themeNeon:'Neon',
         alertEnterCode:'Введіть код кімнати', alertRoomFull:'Кімната повна', alertResetOk:'Ок. Рекорд скинуто.', p2pOfferInfo:'Скопіюй Offer і передай супернику. Потім встав Answer.', p2pAnswerInfo:'Скопіюй Answer і передай творцю.', p2pConnected:'Зʼєднано! Закрий це вікно — і грай.',
-        youDidNotPick:'Не вибрав — виліт', youWin:'Ти переміг!', youLose:'Ти програв', draw:'Нічия', top:'Топ'
+        youDidNotPick:'Не вибрав — виліт', youWin:'Ти переміг!', youLose:'Ти програв', draw:'Нічия', top:'Топ',
+        throwFx:'Режим кидка (3‑2‑1)', haptics:'Вібрація'
     },
     ru:{brand:'QuickPlay Games', title:'ROCK · PAPER · SCISSORS', loading:'Загрузка...', studioNote:'Минимализм, неон, быстрые матчи.',
         sound:'Звук', theme:'Тема', play:'Играть', menuDesc:'Классика в современном неон-стиле. Выбери режим: против ИИ или онлайн-комнаты.',
@@ -409,7 +416,8 @@
         room:'Комната', players:'Игроков', code:'Код', choiceTimer:'Таймер выбора (сек):', maxPlayers:'Макс. игроков (2..5):', startRound:'▶ Начать раунд', leaveRoom:'Выйти из комнаты', timerHint:'Подсказка: если не сделать выбор до конца таймера — вы выбываете из раунда.',
         langLabel:'Русский', themeDark:'Dark', themeLight:'Light', themeNeon:'Neon',
         alertEnterCode:'Введите код комнаты', alertRoomFull:'Комната заполнена', alertResetOk:'Ок. Рекорд сброшен.', p2pOfferInfo:'Скопируй Offer и передай сопернику. Затем вставь Answer.', p2pAnswerInfo:'Скопируй Answer и передай создателю.', p2pConnected:'Соединено! Закрой окно — и играй.',
-        youDidNotPick:'Не выбрал — вылет', youWin:'Ты победил!', youLose:'Ты проиграл', draw:'Ничья', top:'Топ'
+        youDidNotPick:'Не выбрал — вылет', youWin:'Ты победил!', youLose:'Ты проиграл', draw:'Ничья', top:'Топ',
+        throwFx:'Режим броска (3‑2‑1)', haptics:'Вибрация'
     },
     en:{brand:'QuickPlay Games', title:'ROCK · PAPER · SCISSORS', loading:'Loading...', studioNote:'Minimal, neon, fast rounds.',
         sound:'Sound', theme:'Theme', play:'Play', menuDesc:'Classic with modern neon style. Choose AI or Online rooms.',
@@ -426,7 +434,8 @@
         room:'Room', players:'Players', code:'Code', choiceTimer:'Choice timer (sec):', maxPlayers:'Max players (2..5):', startRound:'▶ Start round', leaveRoom:'Leave room', timerHint:'Hint: if you don’t choose before timer ends — you drop from the round.',
         langLabel:'English', themeDark:'Dark', themeLight:'Light', themeNeon:'Neon',
         alertEnterCode:'Enter room code', alertRoomFull:'Room is full', alertResetOk:'OK. Record reset.', p2pOfferInfo:'Copy Offer and send to opponent. Then paste Answer.', p2pAnswerInfo:'Copy Answer and send back.', p2pConnected:'Connected! Close this window and play.',
-        youDidNotPick:'No choice — dropped', youWin:'You win!', youLose:'You lose', draw:'Draw', top:'Top'
+        youDidNotPick:'No choice — dropped', youWin:'You win!', youLose:'You lose', draw:'Draw', top:'Top',
+        throwFx:'Throw FX (3‑2‑1)', haptics:'Haptics'
     }
   };
   let LANG = localStorage.getItem(LS_LANG) || 'uk';
@@ -456,8 +465,8 @@
   const isTouch = ('ontouchstart' in window) || navigator.maxTouchPoints>0;
 
   /* ---------- Storage ---------- */
-  const K='qpg_rps_profile_v3';
-  const profile={ bestAI:0, sound:true };
+  const K='qpg_rps_profile_v4';
+  const profile={ bestAI:0, sound:true, throwFx:true, haptics:true };
   try{ const r=localStorage.getItem(K); if(r) Object.assign(profile, JSON.parse(r)); }catch(e){}
   const save=()=>{ try{ localStorage.setItem(K, JSON.stringify(profile)); }catch(e){} };
 
@@ -490,6 +499,8 @@
   applyTheme(); applyI18N();
   byId('soundState').textContent = profile.sound?'ON':'OFF';
   byId('soundLabel').textContent = profile.sound ? (LANG==='en'?'On':LANG==='ru'?'Вкл':'Увімк') : (LANG==='en'?'Off':LANG==='ru'?'Выкл':'Вимк');
+  byId('throwFxVal').textContent = profile.throwFx?'ON':'OFF';
+  byId('hapticsVal').textContent = profile.haptics?'ON':'OFF';
 
   $('#btnSound').addEventListener('click',()=>{ profile.sound=!profile.sound; save();
     byId('soundState').textContent=profile.sound?'ON':'OFF';
@@ -506,6 +517,9 @@
     const i=THEMES.indexOf(THEME); THEME = THEMES[(i+1)%THEMES.length];
     localStorage.setItem(LS_THEME, THEME); applyTheme(); applyI18N();
   });
+
+  $('#btnThrowFx').addEventListener('click',()=>{ profile.throwFx=!profile.throwFx; save(); byId('throwFxVal').textContent=profile.throwFx?'ON':'OFF'; audio.click(); });
+  $('#btnHaptics').addEventListener('click',()=>{ profile.haptics=!profile.haptics; save(); byId('hapticsVal').textContent=profile.haptics?'ON':'OFF'; audio.click(); });
 
   const aiOrder=['Easy','Normal','Hard']; let aiIdx=1;
   const setAIDiff=()=>{ byId('aiDiff').textContent = aiOrder[aiIdx]; }; setAIDiff();
@@ -581,18 +595,36 @@
     if(v===R.SCISSORS) return R.ROCK;
     return R.SCISSORS;
   }
+
+  // Анімація «кидання» 3‑2‑1 (коротка, без лагів)
+  function throwFX(next){
+    if(!profile.throwFx){ next(); return; }
+    const seq=['3','2','1','🔥'];
+    let i=0;
+    const step=()=>{
+      setCenter(seq[i], '✊ ✊ ✊');
+      if(profile.haptics && navigator.vibrate) try{ navigator.vibrate(20); }catch(e){}
+      i++;
+      if(i<seq.length) setTimeout(step, 220);
+      else setTimeout(next, 80);
+    };
+    step();
+  }
+
   function resolveRoundAI(playerChoice){
     audio.click();
     match.waitForPick=false;
-    const ai = aiPick(match.lastPlayer);
-    match.lastPlayer = playerChoice;
-    const res = outcome(playerChoice, ai);
-    if(res>0){ match.score+=1; match.streak+=1; showResult(t('youWin'), `${t('youWin')}: ${icon(playerChoice)} · AI: ${icon(ai)}`, true); audio.win(); }
-    else if(res<0){ match.streak=0; showResult(t('youLose'), `${t('youLose')}: ${icon(playerChoice)} · AI: ${icon(ai)}`, false); audio.lose(); }
-    else { showResult(t('draw'), `You: ${icon(playerChoice)} · AI: ${icon(ai)}`); }
-    updateHUD();
-    profile.bestAI=Math.max(profile.bestAI, match.score); save(); byId('best').textContent=profile.bestAI;
-    setTimeout(()=>{ match.waitForPick=true; setCenter(t('makeChoice'),'🪨 / ✂️ / 📄'); }, 700);
+    throwFX(()=>{
+      const ai = aiPick(match.lastPlayer);
+      match.lastPlayer = playerChoice;
+      const res = outcome(playerChoice, ai);
+      if(res>0){ match.score+=1; match.streak+=1; showResult(t('youWin'), `You: ${icon(playerChoice)} · AI: ${icon(ai)}`, true); audio.win(); }
+      else if(res<0){ match.streak=0; showResult(t('youLose'), `You: ${icon(playerChoice)} · AI: ${icon(ai)}`, false); audio.lose(); }
+      else { showResult(t('draw'), `You: ${icon(playerChoice)} · AI: ${icon(ai)}`); }
+      updateHUD();
+      profile.bestAI=Math.max(profile.bestAI, match.score); save(); byId('best').textContent=profile.bestAI;
+      setTimeout(()=>{ match.waitForPick=true; setCenter(t('makeChoice'),'🪨 / ✂️ / 📄'); }, 700);
+    });
   }
   function outcome(a,b){ if(a===b) return 0; return (beats[a]===b)? +1 : -1; }
   function icon(v){ return v===R.ROCK?'🪨': (v===R.SCISSORS?'✂️':'📄'); }
@@ -671,7 +703,11 @@
     lobbyUI.timer.onchange=()=>{ if(isHost()){ state.timerSec= clamp(parseInt(lobbyUI.timer.value||'10'),1,30); broadcastState(); } };
     lobbyUI.max.onchange=()=>{ if(isHost()){ state.max= clamp(parseInt(lobbyUI.max.value||'5'),2,5); broadcastState(); } };
 
-    const sendPick=(choice)=>{ audio.click(); ch.postMessage({t:'pick', id:me.id, choice}); const meP=state.players[me.id]; if(meP) meP.choice = choice; setCenter(t('makeChoice'), icon(choice)); };
+    const sendPick=(choice)=>{ audio.click(); ch.postMessage({t:'pick', id:me.id, choice}); const meP=state.players[me.id]; if(meP) meP.choice = choice;
+      if(profile.throwFx){ // локально — короткий FX перед показом «вибір збережено»
+        setCenter('3','✊ ✊ ✊'); setTimeout(()=>setCenter('2','✊ ✊ ✊'),220); setTimeout(()=>setCenter('1','✊ ✊ ✊'),440); setTimeout(()=>setCenter(t('makeChoice'), icon(choice)),660);
+      } else setCenter(t('makeChoice'), icon(choice));
+      if(profile.haptics && navigator.vibrate) try{ navigator.vibrate(15); }catch(e){} };
     $('#btnRock').onclick=()=>sendPick('rock');
     $('#btnScissors').onclick=()=>sendPick('scissors');
     $('#btnPaper').onclick=()=>sendPick('paper');
@@ -791,7 +827,7 @@
   p2pUI.accept.onclick=async()=>{ const ans=p2pUI.box.value.trim(); if(!ans){ alert(t('insertAnswer')); return; } await rtc.acceptAnswer(ans); alert(t('p2pConnected')); };
   p2pUI.close.onclick=()=>{ p2pUI.overlay.style.display='none'; };
 
-  function p2pApply(m){ if(m.act==='result'){ setCenter(m.text, m.sub); if(m.win===true) audio.win(); else if(m.win===false) audio.lose(); } }
+  function p2pApply(m){ if(m.act==='result'){ setCenter(m.text, m.sub); if(profile.haptics && navigator.vibrate) try{ navigator.vibrate(20);}catch(e){}; } }
 
   /* ---------- Init ---------- */
   applyTheme(); applyI18N();
